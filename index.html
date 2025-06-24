@@ -171,23 +171,11 @@
         padding: 0.7rem 1.2rem;
         color: var(--text-muted);
         text-decoration: none;
-        border-radius: var(--radius);
-        font-size: 1.01rem;
-        font-weight: 500;
-        transition: background var(--transition), color var(--transition);
-      }
-      .sidebar a {
-        display: block;
-        padding: 0.7rem 1.2rem;
-        color: var(--text-muted);
-        text-decoration: none;
-        /* Remove border-radius for full-width highlight */
-        border-radius: 0;
+        border-radius: 0; /* full-width highlight */
         font-size: 1.01rem;
         font-weight: 500;
         transition: background var(--transition), color var(--transition);
         width: 100%;
-        /* Make sure anchor fills the li and sidebar width */
         box-sizing: border-box;
       }
 
@@ -461,24 +449,18 @@
         .sidebar {
           max-width: 100%;
           min-width: 0;
-          flex-direction: row;
-          gap: 0.5rem;
+          /* Keep vertical layout on mobile */
+          flex-direction: column;
+          gap: 0.2rem;
           padding: 1rem 0.5rem;
         }
-        main {
-          max-width: 100%;
-          padding: 1.2rem 0.7rem;
+        .sidebar-title {
+          margin-bottom: 0.7rem;
+          margin-left: 1.2rem;
         }
-        .gemstone-row {
-          gap: 0.5rem;
-        }
-        .gemstone-btn {
-          width: 48px;
-          height: 48px;
-        }
-        .gemstone-btn img {
-          width: 36px;
-          height: 36px;
+        .sidebar-cursor {
+          /* Optional: adjust width for mobile */
+          width: 3px;
         }
       }
       .squares-spinner {
