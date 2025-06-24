@@ -808,7 +808,12 @@ z"
         <div id="squares-gemstones"></div>
         <section class="source-section">
           <h2>Squares Source Code</h2>
-          <pre id="source-code" class="language-javascript"><code>
+          <pre id="source-code-squares" class="language-javascript"><code>
+</code></pre>
+        </section>
+        <section class="source-section">
+          <h2>Coinflip Source Code</h2>
+          <pre id="source-code-coinflip" class="language-javascript"><code>
 </code></pre>
         </section>
       </main>
@@ -1182,7 +1187,15 @@ c24 -14 58 -45 75 -68 l30 -44 3 -1331 c2 -940 0 -1343 -8 -1370 -14 -49 -65
       fetch("https://raw.githubusercontent.com/CLARKFlip/ProvablyFair/refs/heads/main/SquaresFair.js")
         .then((r) => r.text())
         .then((code) => {
-          const codeElem = document.querySelector("#source-code code");
+          const codeElem = document.querySelector("#source-code-squares code");
+          codeElem.textContent = code;
+          if (window.Prism) Prism.highlightElement(codeElem);
+        });
+
+      fetch("https://raw.githubusercontent.com/CLARKFlip/ProvablyFair/refs/heads/main/CoinflipFair.js")
+        .then((r) => r.text())
+        .then((code) => {
+          const codeElem = document.querySelector("#source-code-coinflip code");
           codeElem.textContent = code;
           if (window.Prism) Prism.highlightElement(codeElem);
         });
