@@ -288,6 +288,26 @@
         transform: translateY(24px);
         animation: gemstone-fadein 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
       }
+
+      .coin-btn {
+        border: none;
+        outline: none;
+        background: none;
+        width: 120px;
+        height: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.18s, box-shadow 0.18s;
+        padding: 0;
+        margin: 0;
+        position: relative;
+        cursor: default;
+        opacity: 0;
+        transform: translateY(24px);
+        animation: gemstone-fadein 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+
       @keyframes gemstone-fadein {
         to {
           opacity: 1;
@@ -758,23 +778,24 @@ z"
             <label for="mode">Game</label>
             <select class="custom-select" id="mode">
               <option value="squares">Squares</option>
+              <option value="coinflip">Coinflip</option>
             </select>
           </div>
-          <div class="field">
+          <div class="field" id="server-seed-field">
             <label for="serverSeed">Server Seed</label>
             <input type="text" id="serverSeed" required placeholder="e.g. 4361c93af5f2b14c" />
           </div>
-          <div class="field">
+          <div class="field" id="stain-field">
             <label for="stain">Stain</label>
             <input type="text" id="stain" required placeholder="e.g. 6e2b1a..." />
           </div>
-          <div class="field">
+          <div class="field" id="uncovered-field">
             <label for="uncovered">Squares Uncovered</label>
             <span class="number-input-wrap">
               <input type="number" id="uncovered" min="1" max="5" required placeholder="e.g. 2" />
             </span>
           </div>
-          <div class="field">
+          <div class="field" id="difficulty-field">
             <label for="difficulty">Difficulty</label>
             <select class="custom-select" id="difficulty" required>
               <option value="easy">Easy (50%)</option>
@@ -792,8 +813,34 @@ z"
         </section>
       </main>
     </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
     <script>
-      // SquaresFair.js logic for browser
+      // Coinflip and Squares logic for browser
+      class Coinflip {
+        constructor() {
+          this.serverSeed = null;
+          this.serverHash = null;
+          this.stain = null;
+        }
+        setServerSeed(seed) {
+          this.serverSeed = seed;
+          this.serverHash = sha256(seed);
+          return this.serverHash;
+        }
+        setStain(stain) {
+          this.stain = stain;
+          return this.stain;
+        }
+        determineOutcome() {
+          const hmac = hmac_sha256(this.serverSeed, this.stain);
+          const float = parseInt(hmac.slice(0, 16), 16) / 0xffffffffffffffff;
+          return { coinSide: float < 0.5 ? "Heads" : "Tails", decimal: float, hmac };
+        }
+      }
+
       class Squares {
         constructor() {
           this.serverSeed = null;
@@ -838,6 +885,21 @@ z"
         hard: 1 / 7.0,
         expert: 1 / 11.5,
       };
+
+      function updateFormVisibility() {
+        const mode = document.getElementById("mode").value;
+        document.getElementById("uncovered-field").style.display = mode === "squares" ? "" : "none";
+        document.getElementById("difficulty-field").style.display = mode === "squares" ? "" : "none";
+      }
+
+      function updateGameDisplay() {
+        const mode = document.getElementById("mode").value;
+        if (mode === "squares") {
+          updateSquaresGemstones();
+        } else if (mode === "coinflip") {
+          updateCoinflipResult();
+        }
+      }
 
       function updateSquaresGemstones() {
         const serverSeed = document.getElementById("serverSeed").value.trim();
@@ -989,110 +1051,135 @@ c24 -14 58 -45 75 -68 l30 -44 3 -1331 c2 -940 0 -1343 -8 -1370 -14 -49 -65
         }
       }
 
+      function updateCoinflipResult() {
+        const serverSeed = document.getElementById("serverSeed").value.trim();
+        const stain = document.getElementById("stain").value.trim();
+
+        if (!serverSeed || !stain) {
+          const spinnerHTML = `
+          <div class="squares-spinner">
+            <svg class="squares-spinner-svg" viewBox="0 0 48 48">
+              <circle class="squares-spinner-circle" cx="24" cy="24" r="18"/>
+              <circle class="squares-spinner-ball" cx="24" cy="6" r="4"/>
+            </svg>
+          </div>
+        `;
+          const container = document.getElementById("squares-gemstones");
+          if (!container.querySelector(".squares-spinner")) {
+            container.innerHTML = spinnerHTML;
+          }
+          return;
+        }
+
+        const coinflip = new Coinflip();
+        const serverHash = coinflip.setServerSeed(serverSeed);
+        coinflip.setStain(stain);
+        const outcome = coinflip.determineOutcome();
+
+        let coinImg = outcome.coinSide === "Heads" ? "heads.png" : "tails.png";
+        let coinLabel = outcome.coinSide;
+
+        let html = `
+        <div class="gemstone-row" style="justify-content:center;">
+          <span class="coin-btn" style="animation-delay:0s;">
+            <img src="${coinImg}" alt="${coinLabel}" draggable="false" style="width:110px;height:110px;box-shadow:0 2px 8px #0002;border-radius:50%;background:none;display:block;">
+          </span>
+        </div>
+        <div class="gemstone-info">
+          <div class="server-hash-row">
+            <input class="server-hash-input" id="serverHashInput" value="${serverHash}" readonly tabindex="0" />
+            <button class="copy-btn" id="copyServerHashBtn" type="button">
+              <svg version="1.0" xmlns="http://www.w3.org/2000/svg"
+ width="512.000000pt" height="512.000000pt" viewBox="0 0 512.000000 512.000000"
+ preserveAspectRatio="xMidYMid meet">
+
+<g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)"
+fill="currentColor" stroke="none">
+<path d="M764 4895 c-82 -18 -137 -47 -201 -107 -62 -59 -95 -112 -117 -189
+-15 -49 -16 -198 -14 -1511 l3 -1456 30 -44 c87 -123 263 -123 350 0 l30 44 5
+1347 5 1348 30 48 c22 36 45 57 84 77 l53 28 1112 0 c1053 0 1113 1 1151 19
+158 72 167 295 15 381 l-45 25 -1215 2 c-982 1 -1227 -1 -1276 -12z"/>
+<path d="M1570 4030 c-117 -43 -216 -137 -263 -252 l-22 -53 -3 -1564 c-2
+-1387 -1 -1571 13 -1625 41 -161 174 -285 339 -315 83 -15 2409 -15 2492 0
+121 22 229 96 291 200 67 112 63 13 63 1714 0 1002 -4 1555 -11 1584 -28 124
+-117 234 -235 292 l-69 34 -1270 2 c-1244 2 -1271 2 -1325 -17z m2370 -430
+c24 -14 58 -45 75 -68 l30 -44 3 -1331 c2 -940 0 -1343 -8 -1370 -14 -49 -65
+-106 -115 -128 -38 -18 -94 -19 -1043 -19 -884 0 -1007 2 -1040 16 -47 19 -88
+58 -113 106 -19 37 -19 73 -17 1381 l3 1343 27 42 c16 23 39 49 53 58 68 44
+47 43 1100 41 l1000 -2 45 -25z"/>
+</g>
+</svg>
+            </button>
+          </div>
+          <div style="margin-bottom:0.5em;">
+            <b>Outcome:</b> <span style="color:#ffe066;">${coinLabel}</span><br>
+            <b>Decimal:</b> <span style="color:#ffe066;">${outcome.decimal}</span>
+          </div>
+        </div>
+        `;
+
+        document.getElementById("squares-gemstones").innerHTML = html;
+
+        const copyBtn = document.getElementById("copyServerHashBtn");
+        if (copyBtn) {
+          copyBtn.onclick = function () {
+            const input = document.getElementById("serverHashInput");
+            if (input) {
+              input.select();
+              input.setSelectionRange(0, 99999);
+              navigator.clipboard.writeText(input.value);
+              copyBtn.classList.add("copied");
+              setTimeout(() => copyBtn.classList.remove("copied"), 1200);
+            }
+          };
+        }
+      }
+
       // Remove submit button and auto-update on input change
       document.querySelector(".verifier-form button")?.remove();
       document.querySelectorAll("#squares-form input, #squares-form select").forEach((el) => {
-        el.addEventListener("input", updateSquaresGemstones);
-        el.addEventListener("change", updateSquaresGemstones);
+        el.addEventListener("input", () => {
+          updateFormVisibility();
+          updateGameDisplay();
+        });
+        el.addEventListener("change", () => {
+          updateFormVisibility();
+          updateGameDisplay();
+        });
       });
 
-      updateSquaresGemstones();
+      // Initial update
+      updateFormVisibility();
+      updateGameDisplay();
 
       document.getElementById("squares-form").addEventListener("submit", function (e) {
         e.preventDefault();
-        const serverSeed = document.getElementById("serverSeed").value.trim();
-        const stain = document.getElementById("stain").value.trim();
-        const difficultyKey = document.getElementById("difficulty").value;
-        const uncoveredInput = parseInt(document.getElementById("uncovered").value, 10);
-
-        const squares = 5; // Always 5 squares
-        const difficulty = SQUARES_DIFFICULTY_MAP[difficultyKey];
-
-        const squaresFair = new Squares();
-        const serverHash = squaresFair.setServerSeed(serverSeed);
-        squaresFair.setStain(stain);
-        squaresFair.setGameParams(difficulty, squares);
-
-        let failedAt = null;
-        let gemstoneArr = [];
-        // Determine outcomes for all 5 squares
-        for (let i = 0; i < squares; i++) {
-          const outcome = squaresFair.determineOutcome(i);
-          if (!failedAt && !outcome.success) {
-            failedAt = i + 1;
-          }
-          gemstoneArr.push({
-            success: outcome.success,
-            cracked: !outcome.success,
-            img: outcome.success ? "square_gemstone.png" : "square_gemstone_cracked.png",
-            label: i + 1,
-          });
-        }
-
-        // Determine what to display based on uncoveredInput and failedAt
-        let displayArr = [];
-        if (failedAt && uncoveredInput >= failedAt) {
-          // All tiles up to uncoveredInput are cracked (including successful ones)
-          for (let i = 0; i < squares; i++) {
-            if (i < uncoveredInput) {
-              displayArr.push({
-                cls: "cracked",
-                img: "square_gemstone_cracked.png",
-                label: i + 1,
-              });
-            } else {
-              displayArr.push({
-                cls: "uncovered",
-                img: "square_gemstone_flipside.png",
-                label: failedAt,
-              });
-            }
-          }
-        } else {
-          // Show actual outcomes up to uncoveredInput, rest are flipside
-          for (let i = 0; i < squares; i++) {
-            if (i < uncoveredInput) {
-              displayArr.push({
-                cls: gemstoneArr[i].cracked ? "cracked" : "success",
-                img: gemstoneArr[i].img,
-                label: i + 1,
-              });
-            } else {
-              displayArr.push({
-                cls: "uncovered",
-                img: "square_gemstone_flipside.png",
-                label: failedAt,
-              });
-            }
-          }
-        }
-
-        let gemstones = `<div class="gemstone-row">`;
-        displayArr.forEach(
-          (gem) =>
-            (gemstones += `<span class="gemstone-btn ${gem.cls}"><img src="${gem.img}" alt="" draggable="false"></span>`)
-        );
-        gemstones += `</div>`;
-
-        let summary = `<div class="gemstone-info">
-        <b>Server Hash:</b> <span style="color:#3fa9f5;font-family:monospace;">${serverHash}</span><br>
-        <b>Per-tile probability:</b> <span style="color:#ffe066;">${(squaresFair.perTileProb * 100).toFixed(4)}%</span>
-      </div>`;
-
-        if (failedAt && uncoveredInput >= failedAt) {
-          summary += `<div class="gemstone-summary" style="color:#D22D39;">Game failed at tile #${failedAt}.</div>`;
-        } else if (uncoveredInput === squares && !failedAt) {
-          summary += `<div class="gemstone-summary" style="color:#00863A;">All tiles uncovered successfully!</div>`;
-        } else {
-          summary += `<div class="gemstone-summary" style="color:#ffe066;">Game in progress...</div>`;
-        }
-
-        document.getElementById("squares-gemstones").innerHTML = gemstones + summary;
+        updateGameDisplay();
       });
 
-      // Custom number input arrows for Number of Squares (optional, not shown in UI)
+      // Autofill from URL parameters
+      function autofillFromURL() {
+        const params = new URLSearchParams(window.location.search);
+
+        const gamemode = params.get("gamemode");
+        const serverSeed = params.get("serverSeed");
+        const stain = params.get("stain");
+        const uncovered = params.get("uncovered");
+        const difficulty = params.get("difficulty");
+
+        if (gamemode !== null) document.getElementById("mode").value = gamemode.toLowerCase();
+        if (serverSeed !== null) document.getElementById("serverSeed").value = serverSeed;
+        if (stain !== null) document.getElementById("stain").value = stain;
+        if (uncovered !== null) document.getElementById("uncovered").value = uncovered;
+        if (difficulty !== null) document.getElementById("difficulty").value = difficulty.toLowerCase();
+      }
+
+      autofillFromURL();
+      updateFormVisibility();
+      updateGameDisplay();
+
       // Load and highlight SquaresFair.js source code
-      fetch("SquaresFair.js")
+      fetch("https://raw.githubusercontent.com/CLARKFlip/ProvablyFair/refs/heads/main/SquaresFair.js")
         .then((r) => r.text())
         .then((code) => {
           const codeElem = document.querySelector("#source-code code");
@@ -1100,6 +1187,7 @@ c24 -14 58 -45 75 -68 l30 -44 3 -1331 c2 -940 0 -1343 -8 -1370 -14 -49 -65
           if (window.Prism) Prism.highlightElement(codeElem);
         });
 
+      // Splash animation
       window.addEventListener("DOMContentLoaded", () => {
         const splash = document.getElementById("splash-init");
         const maskRect = document.getElementById("splash-mask-rect");
@@ -1138,27 +1226,6 @@ c24 -14 58 -45 75 -68 l30 -44 3 -1331 c2 -940 0 -1343 -8 -1370 -14 -49 -65
         maskRect.setAttribute("height", 0);
         requestAnimationFrame(animateMask);
       });
-
-      function autofillFromURL() {
-        const params = new URLSearchParams(window.location.search);
-
-        const serverSeed = params.get("serverSeed");
-        const stain = params.get("stain");
-        const uncovered = params.get("uncovered");
-        const difficulty = params.get("difficulty");
-
-        if (serverSeed !== null) document.getElementById("serverSeed").value = serverSeed;
-        if (stain !== null) document.getElementById("stain").value = stain;
-        if (uncovered !== null) document.getElementById("uncovered").value = uncovered;
-        if (difficulty !== null) document.getElementById("difficulty").value = difficulty;
-      }
-
-      // Run autofill before first update
-      autofillFromURL();
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
   </body>
 </html>
