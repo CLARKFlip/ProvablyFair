@@ -1138,6 +1138,23 @@ c24 -14 58 -45 75 -68 l30 -44 3 -1331 c2 -940 0 -1343 -8 -1370 -14 -49 -65
         maskRect.setAttribute("height", 0);
         requestAnimationFrame(animateMask);
       });
+
+      function autofillFromURL() {
+        const params = new URLSearchParams(window.location.search);
+
+        const serverSeed = params.get("serverSeed");
+        const stain = params.get("stain");
+        const uncovered = params.get("uncovered");
+        const difficulty = params.get("difficulty");
+
+        if (serverSeed !== null) document.getElementById("serverSeed").value = serverSeed;
+        if (stain !== null) document.getElementById("stain").value = stain;
+        if (uncovered !== null) document.getElementById("uncovered").value = uncovered;
+        if (difficulty !== null) document.getElementById("difficulty").value = difficulty;
+      }
+
+      // Run autofill before first update
+      autofillFromURL();
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
