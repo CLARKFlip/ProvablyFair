@@ -40,6 +40,10 @@
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
       }
+
+      html {
+        overflow-y: scroll;
+      }
       body {
         background: var(--bg);
       }
@@ -79,7 +83,33 @@
         margin: 2.5rem auto 0 auto;
         padding: 0 2rem;
       }
+      * {
+        scrollbar-width: thin; /* Firefox */
+        scrollbar-color: #ffffff1f transparent; /* thumb color, track color */
+      }
+
+      /* Chrome, Edge, Safari */
+      *::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      *::-webkit-scrollbar-track {
+        background: transparent;
+        border-radius: 7px;
+      }
+
+      *::-webkit-scrollbar-thumb {
+        background-color: #ffffff1f; /* visible thumb */
+        border-radius: 7px;
+        border: none;
+      }
+
+      *::-webkit-scrollbar-thumb:hover {
+        background-color: #ffffff44; /* slightly more visible on hover */
+      }
       .sidebar {
+        position: relative;
         background: var(--bg-panel);
         border-radius: var(--radius-lg);
         padding: 2rem 0.5rem 2rem 0.5rem;
@@ -89,7 +119,26 @@
         flex-direction: column;
         gap: 0.2rem;
         height: fit-content;
+        /* Remove padding on left/right to allow full-width highlight */
+        padding-left: 0;
+        padding-right: 0;
       }
+
+      .sidebar-cursor {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 5px;
+        height: 44px; /* Will be set dynamically */
+        background: var(--primary);
+        border-radius: 3px;
+        transition: top 0.28s cubic-bezier(0.4, 0, 0.2, 1), height 0.18s;
+        z-index: 100;
+        /* Start hidden, will be positioned by JS */
+        opacity: 1;
+        pointer-events: none;
+      }
+
       .sidebar-title {
         font-size: 1.13rem;
         font-weight: 700;
@@ -101,16 +150,23 @@
         color: var(--primary);
       }
       .sidebar ul {
+        position: relative;
+        z-index: 2;
         list-style: none;
         padding: 0;
         margin: 0;
         width: 100%;
       }
+
       .sidebar li {
+        position: relative;
+        z-index: 2;
         margin: 0;
         padding: 0;
       }
       .sidebar a {
+        position: relative;
+        z-index: 2;
         display: block;
         padding: 0.7rem 1.2rem;
         color: var(--text-muted);
@@ -120,10 +176,27 @@
         font-weight: 500;
         transition: background var(--transition), color var(--transition);
       }
+      .sidebar a {
+        display: block;
+        padding: 0.7rem 1.2rem;
+        color: var(--text-muted);
+        text-decoration: none;
+        /* Remove border-radius for full-width highlight */
+        border-radius: 0;
+        font-size: 1.01rem;
+        font-weight: 500;
+        transition: background var(--transition), color var(--transition);
+        width: 100%;
+        /* Make sure anchor fills the li and sidebar width */
+        box-sizing: border-box;
+      }
+
       .sidebar a.active,
       .sidebar a:hover {
         background: var(--primary-dark);
         color: var(--primary);
+        /* Remove border-radius for highlight */
+        border-radius: 0;
       }
       main {
         flex: 1 1 0;
@@ -768,11 +841,13 @@ z"
           </svg>
           Provably Fair
         </div>
+        <div class="sidebar-cursor"></div>
         <ul>
-          <li><a href="#" class="active">Calculation</a></li>
+          <li><a href="#" class="active" id="nav-calc">Calculation</a></li>
+          <li><a href="#" id="nav-how">How It Works</a></li>
         </ul>
       </nav>
-      <main>
+      <main id="main-calc" style="">
         <form class="verifier-form" id="squares-form" autocomplete="off">
           <div class="field">
             <label for="mode">Game</label>
@@ -816,6 +891,19 @@ z"
           <pre id="source-code-coinflip" class="language-javascript"><code>
 </code></pre>
         </section>
+      </main>
+      <main id="main-how" style="display: none">
+        <h2>How Provably Fair Works</h2>
+        <p>
+          Each game outcome is determined by combining a secret server seed (committed in advance), a public "stain"
+          (unique per game), and, for Squares, additional parameters. The server seed is hashed and published before the
+          game, so the operator cannot change it after the fact.<br /><br />
+          For Coinflip:<br />
+          <code>HMAC_SHA256(serverSeed, stain) → hex → integer → decimal → Heads/Tails</code><br />
+          For Squares:<br />
+          <code>HMAC_SHA256(serverSeed, stain + tileIndex) → hex → integer → decimal → Success/Fail</code><br />
+          You can verify any result by copying the values above and running the provided source code.
+        </p>
       </main>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
@@ -1039,6 +1127,30 @@ c24 -14 58 -45 75 -68 l30 -44 3 -1331 c2 -940 0 -1343 -8 -1370 -14 -49 -65
           summary += `<div class="gemstone-summary" style="color:#ffe066;">Game in progress...</div>`;
         }
 
+        let insight = "";
+        for (let i = 0; i < uncoveredInput; i++) {
+          const outcome = squaresFair.determineOutcome(i);
+          const hmac = outcome.hmac;
+          const hex = hmac.slice(0, 16);
+          const integer = parseInt(hex, 16);
+          const denominator = 0xffffffffffffffff;
+          const decimal = outcome.decimal;
+          insight +=
+            `Tile #${i + 1}:\n` +
+            `  HMAC (SHA256): ${hmac}\n` +
+            `  First 16 hex chars: ${hex}\n` +
+            `  Integer: ${integer}\n` +
+            `  Integer / 2^64: ${integer} / ${denominator} = ${decimal}\n` +
+            `  Success: ${outcome.success ? "Yes" : "No"}\n\n`;
+        }
+        if (insight) {
+          summary += `
+    <pre style="background:#23273a;color:var(--text-muted);padding:1em;border-radius:7px;overflow-x:auto;">
+${insight.trim()}
+    </pre>
+  `;
+        }
+
         document.getElementById("squares-gemstones").innerHTML = gemstones + summary;
 
         const copyBtn = document.getElementById("copyServerHashBtn");
@@ -1123,7 +1235,21 @@ c24 -14 58 -45 75 -68 l30 -44 3 -1331 c2 -940 0 -1343 -8 -1370 -14 -49 -65
         </div>
         `;
 
-        document.getElementById("squares-gemstones").innerHTML = html;
+        const hmac = outcome.hmac;
+        const hex = hmac.slice(0, 16);
+        const integer = parseInt(hex, 16);
+        const denominator = 0xffffffffffffffff;
+        const decimal = outcome.decimal;
+
+        let insight = `
+          <pre style="background:#23273a;color:var(--text-muted);padding:1em;border-radius:7px;overflow-x:auto;">
+  HMAC (SHA256): ${hmac}
+  First 16 hex chars: ${hex}
+  Integer: ${integer}
+  Integer / 2^64: ${integer} / ${denominator} = ${decimal}
+  Outcome: ${outcome.coinSide}</pre>`;
+
+        document.getElementById("squares-gemstones").innerHTML = html + insight;
 
         const copyBtn = document.getElementById("copyServerHashBtn");
         if (copyBtn) {
@@ -1239,6 +1365,59 @@ c24 -14 58 -45 75 -68 l30 -44 3 -1331 c2 -940 0 -1343 -8 -1370 -14 -49 -65
         maskRect.setAttribute("height", 0);
         requestAnimationFrame(animateMask);
       });
+
+      document.getElementById("nav-calc").addEventListener("click", function (e) {
+        e.preventDefault();
+        document.getElementById("main-calc").style.display = "";
+        document.getElementById("main-how").style.display = "none";
+        this.classList.add("active");
+        document.getElementById("nav-how").classList.remove("active");
+      });
+      document.getElementById("nav-how").addEventListener("click", function (e) {
+        e.preventDefault();
+        document.getElementById("main-calc").style.display = "none";
+        document.getElementById("main-how").style.display = "";
+        this.classList.add("active");
+        document.getElementById("nav-calc").classList.remove("active");
+      });
+
+      function moveSidebarCursor() {
+        const sidebar = document.querySelector(".sidebar");
+        const cursor = sidebar.querySelector(".sidebar-cursor");
+        const active = sidebar.querySelector("a.active");
+        if (!active) return;
+
+        // Get position relative to sidebar
+        const sidebarRect = sidebar.getBoundingClientRect();
+        const activeRect = active.getBoundingClientRect();
+        const offsetTop = activeRect.top - sidebarRect.top;
+
+        cursor.style.top = offsetTop + "px";
+        cursor.style.height = active.offsetHeight + "px";
+      }
+
+      // Call on load and after switching
+      moveSidebarCursor();
+
+      document.getElementById("nav-calc").addEventListener("click", function (e) {
+        e.preventDefault();
+        document.getElementById("main-calc").style.display = "";
+        document.getElementById("main-how").style.display = "none";
+        this.classList.add("active");
+        document.getElementById("nav-how").classList.remove("active");
+        moveSidebarCursor();
+      });
+      document.getElementById("nav-how").addEventListener("click", function (e) {
+        e.preventDefault();
+        document.getElementById("main-calc").style.display = "none";
+        document.getElementById("main-how").style.display = "";
+        this.classList.add("active");
+        document.getElementById("nav-calc").classList.remove("active");
+        moveSidebarCursor();
+      });
+
+      // Also call on window resize to keep it in place
+      window.addEventListener("resize", moveSidebarCursor);
     </script>
   </body>
 </html>
