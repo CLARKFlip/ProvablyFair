@@ -453,7 +453,7 @@
           /* Keep vertical layout on mobile */
           flex-direction: column;
           gap: 0.2rem;
-          padding: 0rem 0.5rem;
+          padding: 1rem 0rem;
         }
         .sidebar-title {
           margin-bottom: 0.7rem;
