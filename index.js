@@ -234,7 +234,7 @@ function updateSquaresGemstones() {
             label: i + 1,
           });
         } else {
-          if (failedAt <= uncoveredInput) {
+          if (failedAt !== null && failedAt <= uncoveredInput) {
             displayArr.push({
               cls: "cracked",
               img: "square_gemstone_cracked.png",
