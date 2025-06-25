@@ -706,7 +706,7 @@ fetch("https://raw.githubusercontent.com/CLARKFlip/ProvablyFair/refs/heads/main/
 fetch("https://raw.githubusercontent.com/CLARKFlip/ProvablyFair/refs/heads/main/BlackjackFair.js")
   .then((r) => r.text())
   .then((code) => {
-    const codeElem = document.querySelector("#source-code-coinflip code");
+    const codeElem = document.querySelector("#source-code-blackjack code");
     codeElem.textContent = code;
     if (window.Prism) Prism.highlightElement(codeElem);
   });
