@@ -618,15 +618,20 @@ c24 -14 58 -45 75 -68 l30 -44 3 -1331 c2 -940 0 -1343 -8 -1370 -14 -49 -65
   let decimal = integer / denominator;
   let insight = `
 <pre style="background:#23273a;color:var(--text-muted);padding:1em;border-radius:7px;overflow-x:auto;">
-HMAC_SHA256(serverSeed, stain): ${hmac}
-First 13 hex chars: ${hex}
-Integer: ${integer}
-Integer / 2^52: ${integer} / ${denominator} = ${decimal}
+Blackjack deck shuffle:
+- Start with a standard 52-card deck.
+- For each position i from 51 down to 1:
+    - Read next 8 bytes from HMAC_SHA256(serverSeed, stain) stream as a random number.
+    - If more bytes are needed, extend with HMAC_SHA256(serverSeed, stain + i).
+    - Swap position i with a random position 0 to i.
+- The final deck order is fully determined by serverSeed and stain.
+
+First HMAC_SHA256(serverSeed, stain): ${hmac}
 Shuffled deck: [${blackjack.getDeck().join(", ")}]
 Player hand: [${hands.player.join(", ")}]
 Dealer hand: [${hands.dealer.join(", ")}]
 </pre>
-        `;
+`;
 
   document.getElementById("squares-gemstones").innerHTML = html + insight;
 
