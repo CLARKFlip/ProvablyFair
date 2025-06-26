@@ -334,16 +334,16 @@ c24 -14 58 -45 75 -68 l30 -44 3 -1331 c2 -940 0 -1343 -8 -1370 -14 -49 -65
   for (let i = 0; i < uncoveredInput; i++) {
     const outcome = squaresFair.determineOutcome(i);
     const hmac = outcome.hmac;
-    const hex = hmac.slice(0, 16);
+    const hex = hmac.slice(0, 13);
     const integer = parseInt(hex, 16);
-    const denominator = 0xffffffffffffffff;
+    const denominator = Math.pow(2, 52);
     const decimal = outcome.decimal;
     insight +=
       `Tile #${i + 1}:\n` +
       `  HMAC (SHA256): ${hmac}\n` +
-      `  First 16 hex chars: ${hex}\n` +
+      `  First 13 hex chars: ${hex}\n` +
       `  Integer: ${integer}\n` +
-      `  Integer / 2^64: ${integer} / ${denominator} = ${decimal}\n` +
+      `  Integer / 2^52: ${integer} / ${denominator} = ${decimal}\n` +
       `  Success: ${outcome.success ? "Yes" : "No"}\n\n`;
   }
   if (insight) {
@@ -439,17 +439,17 @@ c24 -14 58 -45 75 -68 l30 -44 3 -1331 c2 -940 0 -1343 -8 -1370 -14 -49 -65
         `;
 
   const hmac = outcome.hmac;
-  const hex = hmac.slice(0, 16);
+  const hex = hmac.slice(0, 13);
   const integer = parseInt(hex, 16);
-  const denominator = 0xffffffffffffffff;
+  const denominator = Math.pow(2, 52);
   const decimal = outcome.decimal;
 
   let insight = `
           <pre style="background:#23273a;color:var(--text-muted);padding:1em;border-radius:7px;overflow-x:auto;">
   HMAC (SHA256): ${hmac}
-  First 16 hex chars: ${hex}
+  First 13 hex chars: ${hex}
   Integer: ${integer}
-  Integer / 2^64: ${integer} / ${denominator} = ${decimal}
+  Integer / 2^52: ${integer} / ${denominator} = ${decimal}
   Outcome: ${outcome.coinSide}</pre>`;
 
   document.getElementById("squares-gemstones").innerHTML = html + insight;
@@ -612,16 +612,16 @@ c24 -14 58 -45 75 -68 l30 -44 3 -1331 c2 -940 0 -1343 -8 -1370 -14 -49 -65
 
   // Insight: show first 8 bytes of HMAC, deck order, and dealt cards
   let hmac = CryptoJS.HmacSHA256(stain, serverSeed).toString(CryptoJS.enc.Hex);
-  let hex = hmac.slice(0, 16);
+  let hex = hmac.slice(0, 13);
   let integer = parseInt(hex, 16);
-  let denominator = 0xffffffffffffffff;
+  let denominator = Math.pow(2, 52);
   let decimal = integer / denominator;
   let insight = `
 <pre style="background:#23273a;color:var(--text-muted);padding:1em;border-radius:7px;overflow-x:auto;">
 HMAC_SHA256(serverSeed, stain): ${hmac}
-First 16 hex chars: ${hex}
+First 13 hex chars: ${hex}
 Integer: ${integer}
-Integer / 2^64: ${integer} / ${denominator} = ${decimal}
+Integer / 2^52: ${integer} / ${denominator} = ${decimal}
 Shuffled deck: [${blackjack.getDeck().join(", ")}]
 Player hand: [${hands.player.join(", ")}]
 Dealer hand: [${hands.dealer.join(", ")}]
