@@ -15,7 +15,7 @@ class Coinflip {
   }
   determineOutcome() {
     const hmac = hmac_sha256(this.serverSeed, this.stain);
-    const float = parseInt(hmac.slice(0, 16), 16) / 0xffffffffffffffff;
+    const float = FairMethods.Float(hmac);
     return { coinSide: float < 0.5 ? "Heads" : "Tails", decimal: float, hmac };
   }
 }
@@ -45,7 +45,7 @@ class Squares {
   }
   determineOutcome(index) {
     const hmac = hmac_sha256(this.serverSeed, this.stain + index);
-    const float = parseInt(hmac.slice(0, 16), 16) / 0xffffffffffffffff;
+    const float = FairMethods.Float(hmac);
     return { success: float < this.perTileProb, decimal: float, hmac };
   }
 }
@@ -119,6 +119,20 @@ class Blackjack {
   getDeck() {
     if (!this.deck) this.generateDeck();
     return this.deck;
+  }
+}
+
+class FairMethods {
+  /**
+   * Converts a hex string to a floating-point number within the range of 0 to 1
+   * @param {String} string - The hex string to convert to a float
+   * @param {BigInt} maxValue - The maximum value for scaling the result (for example, 2^256-1 for a full SHA-256 hash)
+   * @returns {Number} - The floating-point number between 0 and 1
+   */
+  static Float(string) {
+    const trimmed = string.slice(0, 13); // 13 hex chars = 52 bits
+    const intVal = parseInt(trimmed, 16);
+    return intVal / Math.pow(2, 52);
   }
 }
 
